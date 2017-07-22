@@ -1,0 +1,87 @@
+---
+title: "ML_prediction"
+output: html_document
+---
+
+Data
+
+The training data for this project are available here: https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+The test data are available here: https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+```{r setup, include=FALSE}
+ 
+url.train <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+url.test <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+training <- read.csv(url(url.train), na.strings = c("NA", "", "#DIV0!"))
+testing <- read.csv(url(url.test), na.strings = c("NA", "", "#DIV0!"))
+head(training)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Overview
+
+The goal of this project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases.
+
+# Data
+
+ The training data for this project are available here: https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+ The test data are available here: https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+ Read Files
+```{r cars}
+
+url.train <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+url.test <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+training <- read.csv(url(url.train), na.strings = c("NA", "", "#DIV0!"))
+testing <- read.csv(url(url.test), na.strings = c("NA", "", "#DIV0!"))
+
+```
+
+# Prepare data 
+```{r cars1}
+sameColumsName <- colnames(training) == colnames(testing)
+colnames(training)[sameColumsName==FALSE]
+training<-training[,colSums(is.na(training)) == 0]
+testing <-testing[,colSums(is.na(testing)) == 0]
+head(colnames(training))
+
+```
+
+# Create 2 sets of data - Seed data and training data
+Seed data will be 80% training and 20% validation
+
+```{r cars2}
+
+training <- training[,8:dim(training)[2]]
+testing <- testing[,8:dim(testing)[2]]
+set.seed(123)
+library(caret)
+seed_data  <- createDataPartition(y = training$classe, p = 0.8, list = F)
+seed_data_train <- training[seed_data ,]
+seed_data_validation <- training[-seed_data ,]
+
+Training_data <- createDataPartition(y = seed_data_train$classe, p = 0.75, list = F)
+training_data_train <- seed_data_train[Training_data,]
+testing_data_validate <- seed_data_train[-Training_data,]
+
+qplot(classe, fill = "4", data=training_data_train, main="Distribution of Classes")
+names(training_data_train[,-53])
+library(rpart)
+#install.packages('e1071', dependencies=TRUE)
+library(e1071)
+model_tree <- rpart(classe ~ ., data=training_data_train, method="class")
+prediction_tree <- predict(model_tree, testing_data_validate, type="class")
+class_tree <- confusionMatrix(prediction_tree, testing_data_validate$classe)
+class_tree
+
+#install.packages("rpart.plot")
+library(rpart.plot)
+rpart.plot(model_tree)
+library(randomForest)
+forest_model <- randomForest(classe ~ ., data=training_data_train, method="class")
+prediction_forest <- predict(forest_model, testing_data_validate, type="class")
+random_forest <- confusionMatrix(prediction_forest, testing_data_validate$classe)
+random_forest
+
+prediction1 <- predict(forest_model, newdata=testing_data_validate)
+confusionMatrix(prediction1, testing_data_validate$classe)
+
+```
